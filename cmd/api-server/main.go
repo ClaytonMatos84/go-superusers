@@ -15,15 +15,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	}).Methods("GET")
-
-	var users []internal.User
-	mux.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		internal.UploadUsers(w, r, &users)
-	}).Methods("POST")
-
-	mux.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		internal.GetUsers(w, r, &users)
-	}).Methods("GET")
+	mux.HandleFunc("/users", internal.UploadUsers).Methods("POST")
+	mux.HandleFunc("/users", internal.GetUsers).Methods("GET")
 
 	log.Println("Starting server on :8080")
 	if err := http.ListenAndServe(":8080", handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(mux)); err != nil {

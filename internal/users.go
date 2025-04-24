@@ -18,7 +18,9 @@ type User struct {
 	Country string `json:"pais"`
 }
 
-func UploadUsers(w http.ResponseWriter, r *http.Request, users *[]User) {
+var users []User
+
+func UploadUsers(w http.ResponseWriter, r *http.Request) {
 	var memStatus runtime.MemStats
 	start_time := time.Now()
 
@@ -47,7 +49,7 @@ func UploadUsers(w http.ResponseWriter, r *http.Request, users *[]User) {
 		return
 	}
 
-	log.Println("Received users: ", len(*users))
+	log.Println("Received users: ", len(users))
 	runtime.ReadMemStats(&memStatus)
 	duration := time.Since(start_time)
 	info := fmt.Sprintf("Elapsed time = %s. Total memory(KB) consumed = %v", duration, memStatus.Sys/1024)
@@ -56,20 +58,20 @@ func UploadUsers(w http.ResponseWriter, r *http.Request, users *[]User) {
 	w.Write([]byte(info))
 }
 
-func GetUsers(w http.ResponseWriter, r *http.Request, users *[]User) {
+func GetUsers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	if len(*users) == 0 {
+	if len(users) == 0 {
 		http.Error(w, "No users found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(*users); err != nil {
+	if err := json.NewEncoder(w).Encode(users); err != nil {
 		http.Error(w, "Failed to encode users", http.StatusInternalServerError)
 		return
 	}
