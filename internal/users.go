@@ -36,16 +36,28 @@ type User struct {
 	Logs    []logData `json:"logs"`
 }
 
+type responseBody struct {
+	Timestamp     string `json:"timestamp"`
+	ExecutionTime int64  `json:"execution_time_ms"`
+	Message       string `json:"message"`
+}
+
+type responseUploadUsers struct {
+	responseBody
+	Count int `json:"user_count"`
+}
+
+type responseUsers struct {
+	responseBody
+	Count int    `json:"user_count"`
+	Data  []User `json:"data"`
+}
+
 var users []User
 
 func UploadUsers(w http.ResponseWriter, r *http.Request) {
 	var memStatus runtime.MemStats
 	start_time := time.Now()
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -70,27 +82,89 @@ func UploadUsers(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received users: ", len(users))
 	runtime.ReadMemStats(&memStatus)
 	duration := time.Since(start_time)
-	info := fmt.Sprintf("Elapsed time = %s. Total memory(KB) consumed = %v", duration, memStatus.Sys/1024)
+	milliseconds := duration.Milliseconds()
+	info := fmt.Sprintf("Elapsed time = %vms. Total memory(KB) consumed = %v", milliseconds, memStatus.Sys/1024)
 
+	response := responseUploadUsers{
+		responseBody: responseBody{
+			Timestamp:     time.Now().Format(time.RFC3339),
+			ExecutionTime: milliseconds,
+			Message:       info,
+		},
+		Count: len(users),
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(info))
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode users", http.StatusInternalServerError)
+		return
+	}
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
+	var memStatus runtime.MemStats
+	start_time := time.Now()
 
 	if len(users) == 0 {
 		http.Error(w, "No users found", http.StatusNotFound)
 		return
 	}
 
+	runtime.ReadMemStats(&memStatus)
+	duration := time.Since(start_time)
+	milliseconds := duration.Milliseconds()
+	info := fmt.Sprintf("Elapsed time = %vms. Total memory(KB) consumed = %v", milliseconds, memStatus.Sys/1024)
+
+	response := responseUsers{
+		responseBody: responseBody{
+			Timestamp:     time.Now().Format(time.RFC3339),
+			ExecutionTime: milliseconds,
+			Message:       info,
+		},
+		Count: len(users),
+		Data:  users,
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(users); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode users", http.StatusInternalServerError)
+		return
+	}
+}
+
+func GetSuperUsers(w http.ResponseWriter, r *http.Request) {
+	var memStatus runtime.MemStats
+	start_time := time.Now()
+
+	if len(users) == 0 {
+		http.Error(w, "No users found", http.StatusNotFound)
+		return
+	}
+
+	superUsers := make([]User, 0)
+	for _, user := range users {
+		if user.Score >= 900 && user.Active {
+			superUsers = append(superUsers, user)
+		}
+	}
+
+	runtime.ReadMemStats(&memStatus)
+	duration := time.Since(start_time)
+	milliseconds := duration.Milliseconds()
+	info := fmt.Sprintf("Elapsed time = %vms. Total memory(KB) consumed = %v", milliseconds, memStatus.Sys/1024)
+	response := responseUsers{
+		responseBody: responseBody{
+			Timestamp:     time.Now().Format(time.RFC3339),
+			ExecutionTime: milliseconds,
+			Message:       info,
+		},
+		Count: len(superUsers),
+		Data:  superUsers,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode super users", http.StatusInternalServerError)
 		return
 	}
 }
