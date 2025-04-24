@@ -9,13 +9,31 @@ import (
 	"time"
 )
 
+type project struct {
+	Name      string `json:"nome"`
+	Concluded bool   `json:"concluido"`
+}
+
+type team struct {
+	Name     string    `json:"nome"`
+	Leader   bool      `json:"lider"`
+	Projects []project `json:"projetos"`
+}
+
+type logData struct {
+	Date   string `json:"data"`
+	Action string `json:"acao"`
+}
+
 type User struct {
-	ID      string `json:"id"`
-	Name    string `json:"nome"`
-	Age     int    `json:"idade"`
-	Score   int    `json:"score"`
-	Active  bool   `json:"ativo"`
-	Country string `json:"pais"`
+	ID      string    `json:"id"`
+	Name    string    `json:"nome"`
+	Age     int       `json:"idade"`
+	Score   int       `json:"score"`
+	Active  bool      `json:"ativo"`
+	Country string    `json:"pais"`
+	Team    team      `json:"equipe"`
+	Logs    []logData `json:"logs"`
 }
 
 var users []User
