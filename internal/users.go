@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"runtime"
 	"sort"
@@ -42,6 +43,7 @@ type countCountry struct {
 	Count   int    `json:"total"`
 }
 
+// responses
 type responseBody struct {
 	Timestamp     string `json:"timestamp"`
 	ExecutionTime int64  `json:"execution_time_ms"`
@@ -62,6 +64,18 @@ type responseUsers struct {
 type responseTopCountries struct {
 	responseBody
 	Countries []countCountry `json:"countries"`
+}
+
+type responseTeams struct {
+	Team              string  `json:"team"`
+	Count             int     `json:"total_members"`
+	Leaders           int     `json:"leaders"`
+	CompletedProjects int     `json:"completed_projects"`
+	ActivePercent     float64 `json:"active_percentage"`
+}
+type responseTeam struct {
+	responseBody
+	Teams []responseTeams `json:"teams"`
 }
 
 var users []User
@@ -232,4 +246,90 @@ func GetTopCountries(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode top countries", http.StatusInternalServerError)
 		return
 	}
+}
+
+func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
+	memStatus, start_time := initCheck()
+
+	emptyUserList := validateUserList(w)
+	if emptyUserList {
+		return
+	}
+
+	teamMap := make(map[string]responseTeams)
+	for _, user := range users {
+		if user.Team.Name == "" {
+			continue
+		}
+
+		teamName := user.Team.Name
+		if _, exists := teamMap[teamName]; !exists {
+			teamMap[teamName] = responseTeams{
+				Team:              teamName,
+				Count:             0,
+				Leaders:           0,
+				CompletedProjects: 0,
+				ActivePercent:     0,
+			}
+		}
+
+		team := teamMap[teamName]
+		team.Count++
+
+		if user.Team.Leader {
+			team.Leaders++
+		}
+
+		for _, project := range user.Team.Projects {
+			if project.Concluded {
+				team.CompletedProjects++
+			}
+		}
+
+		teamMap[teamName] = team
+	}
+
+	teamsList := make([]responseTeams, 0)
+	for _, team := range teamMap {
+		activeCount := 0
+		for _, user := range users {
+			if user.Team.Name == team.Team && user.Active {
+				activeCount++
+			}
+		}
+		if team.Count > 0 {
+			team.ActivePercent = roundFloat(float64(activeCount)/float64(team.Count)*100, 2)
+		}
+		teamsList = append(teamsList, team)
+	}
+
+	milliseconds, info := finishCheck(memStatus, start_time)
+	response := responseTeam{
+		responseBody: responseBody{
+			Timestamp:     time.Now().Format(time.RFC3339),
+			ExecutionTime: milliseconds,
+			Message:       info,
+		},
+		Teams: teamsList,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode team insights", http.StatusInternalServerError)
+		return
+	}
+}
+
+func validateUserList(w http.ResponseWriter) bool {
+	if len(users) == 0 {
+		http.Error(w, "No users found", http.StatusNotFound)
+		return true
+	}
+	return false
+}
+
+func roundFloat(num float64, precision int) float64 {
+	p := math.Pow(10, float64(precision))
+	return math.Round(num*p) / p
 }
