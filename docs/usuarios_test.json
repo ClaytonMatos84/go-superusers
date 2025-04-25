@@ -5,6 +5,34 @@
         "idade": 19,
         "score": 859,
         "ativo": true,
-        "pais": "Índia"
+        "pais": "Índia",
+        "equipe": {
+            "nome": "Frontend Avengers",
+            "lider": false,
+            "projetos": [
+                {
+                    "nome": "Mobile App",
+                    "concluido": false
+                }
+            ]
+        },
+        "logs": [
+            {
+                "data": "2025-03-25",
+                "acao": "logout"
+            },
+            {
+                "data": "2025-03-26",
+                "acao": "login"
+            },
+            {
+                "data": "2025-03-29",
+                "acao": "logout"
+            },
+            {
+                "data": "2025-03-26",
+                "acao": "login"
+            }
+        ]
     }
 ]
