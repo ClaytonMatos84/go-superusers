@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"runtime"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -76,6 +77,16 @@ type responseTeams struct {
 type responseTeam struct {
 	responseBody
 	Teams []responseTeams `json:"teams"`
+}
+
+type countLogins struct {
+	Date  string `json:"date"`
+	Count int    `json:"total"`
+}
+
+type responseLogins struct {
+	responseBody
+	Logins []countLogins `json:"logins"`
 }
 
 var users []User
@@ -332,4 +343,59 @@ func validateUserList(w http.ResponseWriter) bool {
 func roundFloat(num float64, precision int) float64 {
 	p := math.Pow(10, float64(precision))
 	return math.Round(num*p) / p
+}
+
+func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
+	memStatus, start_time := initCheck()
+
+	emptyUserList := validateUserList(w)
+	if emptyUserList {
+		return
+	}
+
+	loginsPerDay := make(map[string]int)
+	for _, user := range users {
+		for _, log := range user.Logs {
+			if log.Action == "login" {
+				loginsPerDay[log.Date]++
+			}
+		}
+	}
+
+	loginsList := make([]countLogins, 0)
+	for date, count := range loginsPerDay {
+		loginsList = append(loginsList, countLogins{
+			Date:  date,
+			Count: count,
+		})
+	}
+
+	query := r.URL.Query()
+	queryMin := query.Get("min")
+	if queryMin != "" {
+		filteredLoginsList := make([]countLogins, 0)
+		for _, login := range loginsList {
+			if minValue, err := strconv.ParseInt(queryMin, 10, 64); err == nil && int64(login.Count) > minValue {
+				filteredLoginsList = append(filteredLoginsList, login)
+			}
+		}
+		loginsList = filteredLoginsList
+	}
+
+	milliseconds, info := finishCheck(memStatus, start_time)
+	response := responseLogins{
+		responseBody: responseBody{
+			Timestamp:     time.Now().Format(time.RFC3339),
+			ExecutionTime: milliseconds,
+			Message:       info,
+		},
+		Logins: loginsList,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode logins per day", http.StatusInternalServerError)
+		return
+	}
 }
