@@ -131,7 +131,9 @@ func GetTopCountries(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	countriesList = orderCountriesList(countriesList)
+	query := r.URL.Query()
+	querySize := query.Get("size")
+	countriesList = orderCountriesList(countriesList, querySize)
 
 	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseTopCountries{
@@ -150,13 +152,18 @@ func GetTopCountries(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func orderCountriesList(countriesList []dto.CountCountry) []dto.CountCountry {
+func orderCountriesList(countriesList []dto.CountCountry, querySize string) []dto.CountCountry {
+	responseSize := 5
+	if querySize != "" {
+		responseSize, _ = strconv.Atoi(querySize)
+	}
+
 	sort.Slice(countriesList, func(i, j int) bool {
 		return countriesList[i].Count > countriesList[j].Count
 	})
 
-	if len(countriesList) > 5 {
-		countriesList = countriesList[:5]
+	if len(countriesList) > int(responseSize) {
+		countriesList = countriesList[:responseSize]
 	}
 
 	return countriesList
