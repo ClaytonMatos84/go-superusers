@@ -1,98 +1,22 @@
-package internal
+package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"math"
 	"net/http"
-	"runtime"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/ClaytonMatos84/go-superusers/internal/model"
+	"github.com/ClaytonMatos84/go-superusers/internal/model/dto"
+	"github.com/ClaytonMatos84/go-superusers/pkg"
 )
 
-type project struct {
-	Name      string `json:"nome"`
-	Concluded bool   `json:"concluido"`
-}
+var users []model.User
 
-type team struct {
-	Name     string    `json:"nome"`
-	Leader   bool      `json:"lider"`
-	Projects []project `json:"projetos"`
-}
-
-type logData struct {
-	Date   string `json:"data"`
-	Action string `json:"acao"`
-}
-
-type User struct {
-	ID      string    `json:"id"`
-	Name    string    `json:"nome"`
-	Age     int       `json:"idade"`
-	Score   int       `json:"score"`
-	Active  bool      `json:"ativo"`
-	Country string    `json:"pais"`
-	Team    team      `json:"equipe"`
-	Logs    []logData `json:"logs"`
-}
-
-type countCountry struct {
-	Country string `json:"country"`
-	Count   int    `json:"total"`
-}
-
-// responses
-type responseBody struct {
-	Timestamp     string `json:"timestamp"`
-	ExecutionTime int64  `json:"execution_time_ms"`
-	Message       string `json:"message"`
-}
-
-type responseUploadUsers struct {
-	responseBody
-	Count int `json:"user_count"`
-}
-
-type responseUsers struct {
-	responseBody
-	Count int    `json:"user_count"`
-	Data  []User `json:"data"`
-}
-
-type responseTopCountries struct {
-	responseBody
-	Countries []countCountry `json:"countries"`
-}
-
-type responseTeams struct {
-	Team              string  `json:"team"`
-	Count             int     `json:"total_members"`
-	Leaders           int     `json:"leaders"`
-	CompletedProjects int     `json:"completed_projects"`
-	ActivePercent     float64 `json:"active_percentage"`
-}
-type responseTeam struct {
-	responseBody
-	Teams []responseTeams `json:"teams"`
-}
-
-type countLogins struct {
-	Date  string `json:"date"`
-	Count int    `json:"total"`
-}
-
-type responseLogins struct {
-	responseBody
-	Logins []countLogins `json:"logins"`
-}
-
-var users []User
-
-func UploadUsers(w http.ResponseWriter, r *http.Request) {
-	memStatus, start_time := initCheck()
+func UploadLogs(w http.ResponseWriter, r *http.Request) {
+	memStatus, start_time := pkg.InitControlRequest()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -115,9 +39,9 @@ func UploadUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Received users: ", len(users))
-	milliseconds, info := finishCheck(memStatus, start_time)
-	response := responseUploadUsers{
-		responseBody: responseBody{
+	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	response := dto.ResponseUploadUsers{
+		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
 			Message:       info,
@@ -132,34 +56,17 @@ func UploadUsers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func initCheck() (runtime.MemStats, time.Time) {
-	var memStatus runtime.MemStats
-	start_time := time.Now()
+func GetLogs(w http.ResponseWriter, r *http.Request) {
+	memStatus, start_time := pkg.InitControlRequest()
 
-	return memStatus, start_time
-}
-
-func finishCheck(memStatus runtime.MemStats, start_time time.Time) (int64, string) {
-	runtime.ReadMemStats(&memStatus)
-	duration := time.Since(start_time)
-
-	milliseconds := duration.Milliseconds()
-	info := fmt.Sprintf("Elapsed time = %vms. Total memory(KB) consumed = %v", milliseconds, memStatus.Sys/1024)
-
-	return milliseconds, info
-}
-
-func GetUsers(w http.ResponseWriter, r *http.Request) {
-	memStatus, start_time := initCheck()
-
-	if len(users) == 0 {
-		http.Error(w, "No users found", http.StatusNotFound)
+	emptyList := model.ValidateUserList(users, &w)
+	if emptyList {
 		return
 	}
 
-	milliseconds, info := finishCheck(memStatus, start_time)
-	response := responseUsers{
-		responseBody: responseBody{
+	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	response := dto.ResponseUsers{
+		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
 			Message:       info,
@@ -176,17 +83,17 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetSuperUsers(w http.ResponseWriter, r *http.Request) {
-	memStatus, start_time := initCheck()
+	memStatus, start_time := pkg.InitControlRequest()
 
-	if len(users) == 0 {
-		http.Error(w, "No users found", http.StatusNotFound)
+	emptyList := model.ValidateUserList(users, &w)
+	if emptyList {
 		return
 	}
 
-	superUsers := findSuperUsers()
-	milliseconds, info := finishCheck(memStatus, start_time)
-	response := responseUsers{
-		responseBody: responseBody{
+	superUsers := model.FindSuperUsers(users)
+	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	response := dto.ResponseUsers{
+		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
 			Message:       info,
@@ -202,49 +109,33 @@ func GetSuperUsers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func findSuperUsers() []User {
-	superUsers := make([]User, 0)
-	for _, user := range users {
-		if user.Score >= 900 && user.Active {
-			superUsers = append(superUsers, user)
-		}
-	}
-
-	return superUsers
-}
-
 func GetTopCountries(w http.ResponseWriter, r *http.Request) {
-	memStatus, start_time := initCheck()
+	memStatus, start_time := pkg.InitControlRequest()
 
-	if len(users) == 0 {
-		http.Error(w, "No users found", http.StatusNotFound)
+	emptyList := model.ValidateUserList(users, &w)
+	if emptyList {
 		return
 	}
 
-	superUsers := findSuperUsers()
+	superUsers := model.FindSuperUsers(users)
 	countries := make(map[string]int)
 	for _, superUser := range superUsers {
 		countries[superUser.Country]++
 	}
 
-	countriesList := make([]countCountry, 0)
+	countriesList := make([]dto.CountCountry, 0)
 	for country, count := range countries {
-		countriesList = append(countriesList, countCountry{
+		countriesList = append(countriesList, dto.CountCountry{
 			Country: country,
 			Count:   count,
 		})
 	}
 
-	sort.Slice(countriesList, func(i, j int) bool {
-		return countriesList[i].Count > countriesList[j].Count
-	})
-	if len(countriesList) > 5 {
-		countriesList = countriesList[:5]
-	}
+	countriesList = orderCountriesList(countriesList)
 
-	milliseconds, info := finishCheck(memStatus, start_time)
-	response := responseTopCountries{
-		responseBody: responseBody{
+	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	response := dto.ResponseTopCountries{
+		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
 			Message:       info,
@@ -259,15 +150,27 @@ func GetTopCountries(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
-	memStatus, start_time := initCheck()
+func orderCountriesList(countriesList []dto.CountCountry) []dto.CountCountry {
+	sort.Slice(countriesList, func(i, j int) bool {
+		return countriesList[i].Count > countriesList[j].Count
+	})
 
-	emptyUserList := validateUserList(w)
+	if len(countriesList) > 5 {
+		countriesList = countriesList[:5]
+	}
+
+	return countriesList
+}
+
+func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
+	memStatus, start_time := pkg.InitControlRequest()
+
+	emptyUserList := model.ValidateUserList(users, &w)
 	if emptyUserList {
 		return
 	}
 
-	teamMap := make(map[string]responseTeams)
+	teamMap := make(map[string]dto.ResponseTeams)
 	for _, user := range users {
 		if user.Team.Name == "" {
 			continue
@@ -275,7 +178,7 @@ func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
 
 		teamName := user.Team.Name
 		if _, exists := teamMap[teamName]; !exists {
-			teamMap[teamName] = responseTeams{
+			teamMap[teamName] = dto.ResponseTeams{
 				Team:              teamName,
 				Count:             0,
 				Leaders:           0,
@@ -300,7 +203,7 @@ func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
 		teamMap[teamName] = team
 	}
 
-	teamsList := make([]responseTeams, 0)
+	teamsList := make([]dto.ResponseTeams, 0)
 	for _, team := range teamMap {
 		activeCount := 0
 		for _, user := range users {
@@ -309,14 +212,14 @@ func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if team.Count > 0 {
-			team.ActivePercent = roundFloat(float64(activeCount)/float64(team.Count)*100, 2)
+			team.ActivePercent = pkg.RoundFloat(float64(activeCount)/float64(team.Count)*100, 2)
 		}
 		teamsList = append(teamsList, team)
 	}
 
-	milliseconds, info := finishCheck(memStatus, start_time)
-	response := responseTeam{
-		responseBody: responseBody{
+	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	response := dto.ResponseTeam{
+		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
 			Message:       info,
@@ -332,23 +235,10 @@ func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func validateUserList(w http.ResponseWriter) bool {
-	if len(users) == 0 {
-		http.Error(w, "No users found", http.StatusNotFound)
-		return true
-	}
-	return false
-}
-
-func roundFloat(num float64, precision int) float64 {
-	p := math.Pow(10, float64(precision))
-	return math.Round(num*p) / p
-}
-
 func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
-	memStatus, start_time := initCheck()
+	memStatus, start_time := pkg.InitControlRequest()
 
-	emptyUserList := validateUserList(w)
+	emptyUserList := model.ValidateUserList(users, &w)
 	if emptyUserList {
 		return
 	}
@@ -362,9 +252,9 @@ func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	loginsList := make([]countLogins, 0)
+	loginsList := make([]dto.CountLogins, 0)
 	for date, count := range loginsPerDay {
-		loginsList = append(loginsList, countLogins{
+		loginsList = append(loginsList, dto.CountLogins{
 			Date:  date,
 			Count: count,
 		})
@@ -373,7 +263,7 @@ func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	queryMin := query.Get("min")
 	if queryMin != "" {
-		filteredLoginsList := make([]countLogins, 0)
+		filteredLoginsList := make([]dto.CountLogins, 0)
 		for _, login := range loginsList {
 			if minValue, err := strconv.ParseInt(queryMin, 10, 64); err == nil && int64(login.Count) > minValue {
 				filteredLoginsList = append(filteredLoginsList, login)
@@ -382,9 +272,9 @@ func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
 		loginsList = filteredLoginsList
 	}
 
-	milliseconds, info := finishCheck(memStatus, start_time)
-	response := responseLogins{
-		responseBody: responseBody{
+	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	response := dto.ResponseLogins{
+		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
 			Message:       info,
