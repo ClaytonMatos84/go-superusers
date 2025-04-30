@@ -1,6 +1,9 @@
 package dto
 
-import "github.com/ClaytonMatos84/go-superusers/internal/model"
+import (
+	"github.com/ClaytonMatos84/go-superusers/internal/model"
+	"github.com/ClaytonMatos84/go-superusers/pkg"
+)
 
 type ResponseBody struct {
 	Timestamp     string `json:"timestamp"`
@@ -15,8 +18,9 @@ type ResponseUploadUsers struct {
 
 type ResponseUsers struct {
 	ResponseBody
-	Count int          `json:"user_count"`
-	Data  []model.User `json:"data"`
+	Count      int                `json:"user_count"`
+	Pagination pkg.PaginationData `json:"pagination"`
+	Data       []model.User       `json:"data"`
 }
 
 type CountCountry struct {

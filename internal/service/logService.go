@@ -64,6 +64,13 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	query := r.URL.Query()
+	pagination, paginationError := pkg.Pagination(query.Get("page"), query.Get("items"), w, len(users))
+	if paginationError {
+		return
+	}
+
+	userCollection := users[pagination.StartItems:pagination.EndItems]
 	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseUsers{
 		ResponseBody: dto.ResponseBody{
@@ -71,8 +78,9 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 			ExecutionTime: milliseconds,
 			Message:       info,
 		},
-		Count: len(users),
-		Data:  users,
+		Count:      len(userCollection),
+		Pagination: pagination,
+		Data:       userCollection,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
