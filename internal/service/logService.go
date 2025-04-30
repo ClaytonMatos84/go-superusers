@@ -2,7 +2,7 @@ package service
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,32 +13,35 @@ import (
 	"github.com/ClaytonMatos84/go-superusers/pkg"
 )
 
+var logger = slog.Default()
 var users []model.User
 
 func UploadLogs(w http.ResponseWriter, r *http.Request) {
+	logger.Info("UploadLogs endpoint started")
 	memStatus, start_time := pkg.InitControlRequest()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		log.Println("Error getting file from form: ", err)
+		logger.Error("Error getting file from form", slog.String("error", err.Error()))
 		http.Error(w, "Failed to get file from form", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
 	if file == nil {
+		logger.Error("File is empty")
 		http.Error(w, "File is empty", http.StatusBadRequest)
 		return
 	}
 
 	err = json.NewDecoder(file).Decode(&users)
 	if err != nil {
-		log.Println("Error decoding JSON: ", err)
+		logger.Error("Error decoding JSON", slog.String("error", err.Error()))
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
 	}
 
-	log.Println("Received users: ", len(users))
+	logger.Info("File decoded successfully", slog.Int("user_count", len(users)))
 	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseUploadUsers{
 		ResponseBody: dto.ResponseBody{
@@ -48,25 +51,31 @@ func UploadLogs(w http.ResponseWriter, r *http.Request) {
 		},
 		Count: len(users),
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Error encoding response", slog.String("error", err.Error()))
 		http.Error(w, "Failed to encode users", http.StatusInternalServerError)
 		return
 	}
+	logger.Info("UploadLogs endpoint finished successfully", slog.Int("user_count", len(users)))
 }
 
 func GetLogs(w http.ResponseWriter, r *http.Request) {
+	logger.Info("GetLogs endpoint started")
 	memStatus, start_time := pkg.InitControlRequest()
 
 	emptyList := model.ValidateUserList(users, &w)
 	if emptyList {
+		logger.Error("User logs list is empty")
 		return
 	}
 
 	query := r.URL.Query()
 	pagination, paginationError := pkg.Pagination(query.Get("page"), query.Get("items"), w, len(users))
 	if paginationError {
+		logger.Error("Error in pagination", slog.String("error", "Invalid pagination parameters"))
 		return
 	}
 
@@ -82,23 +91,36 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 		Pagination: pagination,
 		Data:       userCollection,
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Error encoding response", slog.String("error", err.Error()))
 		http.Error(w, "Failed to encode users", http.StatusInternalServerError)
 		return
 	}
+	logger.Info("GetLogs endpoint finished successfully", slog.Int("user_count", len(userCollection)))
 }
 
 func GetSuperUsers(w http.ResponseWriter, r *http.Request) {
+	logger.Info("GetSuperUsers endpoint started")
 	memStatus, start_time := pkg.InitControlRequest()
 
 	emptyList := model.ValidateUserList(users, &w)
 	if emptyList {
+		logger.Error("User logs list is empty")
 		return
 	}
 
 	superUsers := model.FindSuperUsers(users)
+	query := r.URL.Query()
+	pagination, paginationError := pkg.Pagination(query.Get("page"), query.Get("items"), w, len(superUsers))
+	if paginationError {
+		logger.Error("Error in pagination", slog.String("error", "Invalid pagination parameters"))
+		return
+	}
+
+	userCollection := superUsers[pagination.StartItems:pagination.EndItems]
 	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseUsers{
 		ResponseBody: dto.ResponseBody{
@@ -106,22 +128,28 @@ func GetSuperUsers(w http.ResponseWriter, r *http.Request) {
 			ExecutionTime: milliseconds,
 			Message:       info,
 		},
-		Count: len(superUsers),
-		Data:  superUsers,
+		Pagination: pagination,
+		Count:      len(userCollection),
+		Data:       userCollection,
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Error encoding response", slog.String("error", err.Error()))
 		http.Error(w, "Failed to encode super users", http.StatusInternalServerError)
 		return
 	}
+	logger.Info("GetSuperUsers endpoint finished successfully", slog.Int("user_count", len(superUsers)))
 }
 
 func GetTopCountries(w http.ResponseWriter, r *http.Request) {
+	logger.Info("GetTopCountries endpoint started")
 	memStatus, start_time := pkg.InitControlRequest()
 
 	emptyList := model.ValidateUserList(users, &w)
 	if emptyList {
+		logger.Error("User logs list is empty")
 		return
 	}
 
@@ -140,8 +168,13 @@ func GetTopCountries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := r.URL.Query()
-	querySize := query.Get("size")
-	countriesList = orderCountriesList(countriesList, querySize)
+	var err bool
+	countriesList, err = orderCountriesList(countriesList, query.Get("size"))
+	if err {
+		logger.Error("Error in ordering countries list", slog.String("error", "Invalid size parameter"))
+		http.Error(w, "Invalid size parameter", http.StatusBadRequest)
+		return
+	}
 
 	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseTopCountries{
@@ -152,18 +185,25 @@ func GetTopCountries(w http.ResponseWriter, r *http.Request) {
 		},
 		Countries: countriesList,
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Error encoding response", slog.String("error", err.Error()))
 		http.Error(w, "Failed to encode top countries", http.StatusInternalServerError)
 		return
 	}
+	logger.Info("GetTopCountries endpoint finished successfully", slog.Int("countries", len(countriesList)))
 }
 
-func orderCountriesList(countriesList []dto.CountCountry, querySize string) []dto.CountCountry {
+func orderCountriesList(countriesList []dto.CountCountry, querySize string) ([]dto.CountCountry, bool) {
 	responseSize := 5
+	var err error
 	if querySize != "" {
-		responseSize, _ = strconv.Atoi(querySize)
+		responseSize, err = strconv.Atoi(querySize)
+		if err != nil || responseSize < 1 {
+			return nil, true
+		}
 	}
 
 	sort.Slice(countriesList, func(i, j int) bool {
@@ -174,14 +214,16 @@ func orderCountriesList(countriesList []dto.CountCountry, querySize string) []dt
 		countriesList = countriesList[:responseSize]
 	}
 
-	return countriesList
+	return countriesList, false
 }
 
 func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
+	logger.Info("GetTeamInsights endpoint started")
 	memStatus, start_time := pkg.InitControlRequest()
 
 	emptyUserList := model.ValidateUserList(users, &w)
 	if emptyUserList {
+		logger.Error("User logs list is empty")
 		return
 	}
 
@@ -245,16 +287,20 @@ func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Error encoding response", slog.String("error", err.Error()))
 		http.Error(w, "Failed to encode team insights", http.StatusInternalServerError)
 		return
 	}
+	logger.Info("GetTeamInsights endpoint finished successfully", slog.Int("teams", len(teamsList)))
 }
 
 func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
+	logger.Info("GetLoginsPerDay endpoint started")
 	memStatus, start_time := pkg.InitControlRequest()
 
 	emptyUserList := model.ValidateUserList(users, &w)
 	if emptyUserList {
+		logger.Error("User logs list is empty")
 		return
 	}
 
@@ -300,7 +346,9 @@ func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Error encoding response", slog.String("error", err.Error()))
 		http.Error(w, "Failed to encode logins per day", http.StatusInternalServerError)
 		return
 	}
+	logger.Info("GetLoginsPerDay endpoint finished successfully", slog.Int("logins", len(loginsList)))
 }

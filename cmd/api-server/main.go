@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/ClaytonMatos84/go-superusers/internal/service"
@@ -10,6 +11,7 @@ import (
 )
 
 func main() {
+	logger := slog.Default()
 	mux := mux.NewRouter()
 	mux.HandleFunc("/health", healthCheck).Methods("GET")
 
@@ -21,17 +23,15 @@ func main() {
 	mux.HandleFunc("/team-insights", service.GetTeamInsights).Methods("GET")
 	mux.HandleFunc("/active-users-per-day", service.GetLoginsPerDay).Methods("GET")
 
-	log.Println("Starting server on :8080")
+	logger.Info("Server started", slog.String("address", ":8080"))
 	if err := http.ListenAndServe(":8080", handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(mux)); err != nil {
+		slog.Error("Failed to start server", slog.String("address", ":8080"), slog.String("error", err.Error()))
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
+	slog.Info("Health check endpoint hit")
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
