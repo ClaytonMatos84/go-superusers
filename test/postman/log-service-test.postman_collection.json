@@ -1,0 +1,646 @@
+{
+	"info": {
+		"_postman_id": "f83edaa0-9ef6-4c78-b0eb-d258e01685d7",
+		"name": "log-service-test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "2246007"
+	},
+	"item": [
+		{
+			"name": "application health",
+			"item": [
+				{
+					"name": "should application must be running",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response body -> OK', function () {",
+									"    pm.expect(pm.response.text()).to.eql('OK');",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/health",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "upload user logs",
+			"item": [
+				{
+					"name": "should uploaded log file with 1000 users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"    pm.expect(responseJson.user_count).to.eql(1000);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:8080/log-users",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"log-users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "should uploaded log error - request without file",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "http://localhost:8080/log-users",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"log-users"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "search logs users",
+			"item": [
+				{
+					"name": "should return logs users - after upload 1000 user logs file data",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate time and user_count response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"    pm.expect(responseJson.user_count).to.eql(100);",
+									"});",
+									"",
+									"pm.test('Validate pagination response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const pagination = responseJson.pagination;",
+									"    pm.expect(pagination.page).to.eql(1);",
+									"    pm.expect(pagination.start_items).to.eql(0);",
+									"    pm.expect(pagination.end_items).to.eql(100);",
+									"    pm.expect(pagination.total_pages).to.eql(10);",
+									"    pm.expect(pagination.items_per_page).to.eql(100);",
+									"    pm.expect(pagination.total_items).to.eql(1000);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/log-users",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"log-users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "should return logs users - after upload 1000 user logs file data Copy with queries pagination",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate time and user_count response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"    pm.expect(responseJson.user_count).to.eql(50);",
+									"});",
+									"",
+									"pm.test('Validate pagination response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const pagination = responseJson.pagination;",
+									"    pm.expect(pagination.page).to.eql(3);",
+									"    pm.expect(pagination.start_items).to.eql(100);",
+									"    pm.expect(pagination.end_items).to.eql(150);",
+									"    pm.expect(pagination.total_pages).to.eql(20);",
+									"    pm.expect(pagination.items_per_page).to.eql(50);",
+									"    pm.expect(pagination.total_items).to.eql(1000);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/log-users?page=3&items=50",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"log-users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "3"
+								},
+								{
+									"key": "items",
+									"value": "50"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "search top users",
+			"item": [
+				{
+					"name": "should return users actives and with score > 950 - file 1000 log users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"    pm.expect(responseJson.user_count).to.eql(65);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/superusers",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"superusers"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "search logs by country",
+			"item": [
+				{
+					"name": "search consolidate users by countries - top 5",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate time response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"});",
+									"",
+									"pm.test('Validate countries response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const countries = responseJson.countries;",
+									"    const contryCont = {",
+									"        Alemanha: 12,",
+									"        Argentina: 8,",
+									"        Canadá: 8,",
+									"        Brasil: 8,",
+									"        França: 7",
+									"    };",
+									"    pm.expect(countries.length).to.eql(5);",
+									"    for (let i = 0; i < countries.length; i++) {",
+									"        const contry = countries[i];",
+									"        pm.expect(contry.total).to.eql(contryCont[contry.country]);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/top-countries",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"top-countries"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search consolidate users by countries - top 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate time response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"});",
+									"",
+									"pm.test('Validate countries response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const countries = responseJson.countries;",
+									"    const contryCont = {",
+									"        Alemanha: 12,",
+									"        Argentina: 8,",
+									"        Canadá: 8,",
+									"        Brasil: 8",
+									"    };",
+									"    pm.expect(countries.length).to.eql(4);",
+									"    for (let i = 0; i < countries.length; i++) {",
+									"        const contry = countries[i];",
+									"        pm.expect(contry.total).to.eql(contryCont[contry.country]);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/top-countries?size=4",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"top-countries"
+							],
+							"query": [
+								{
+									"key": "size",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "search teams insights",
+			"item": [
+				{
+					"name": "search users insights by teams",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate time response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"});",
+									"",
+									"pm.test('Validate teams response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const teams = responseJson.teams;",
+									"    let totalMembers = 0, leaders = 0, completedProjects = 0;",
+									"    for (let i = 0; i < teams.length; i++) {",
+									"        const team = teams[i];",
+									"        totalMembers += team.total_members;",
+									"        leaders += team.leaders;",
+									"        completedProjects += team.completed_projects;",
+									"    }",
+									"    ",
+									"    pm.expect(teams.length).to.eql(5);",
+									"    pm.expect(totalMembers).to.eql(1000);",
+									"    pm.expect(leaders).to.eql(145);",
+									"    pm.expect(completedProjects).to.eql(1411);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/team-insights",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"team-insights"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "search users login per day",
+			"item": [
+				{
+					"name": "search actives users per day - without min query param",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate time response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"});",
+									"",
+									"pm.test('Validate logins response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const logins = responseJson.logins;",
+									"    let totalLogins = 0;",
+									"    for (let i = 0; i < logins.length; i++) {",
+									"        const login = logins[i];",
+									"        totalLogins += login.total;",
+									"    }",
+									"    ",
+									"    pm.expect(logins.length).to.eql(7);",
+									"    pm.expect(totalLogins).to.eql(2472);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/active-users-per-day",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"active-users-per-day"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search actives users per day - with min query param",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Validate time response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.execution_time_ms < 1000).to.be.true;",
+									"});",
+									"",
+									"pm.test('Validate logins response', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const logins = responseJson.logins;",
+									"    let totalLogins = 0;",
+									"    for (let i = 0; i < logins.length; i++) {",
+									"        const login = logins[i];",
+									"        totalLogins += login.total;",
+									"    }",
+									"    ",
+									"    pm.expect(logins.length).to.eql(3);",
+									"    pm.expect(totalLogins).to.eql(1101);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/active-users-per-day?min=360",
+							"host": [
+								"http://localhost:8080"
+							],
+							"path": [
+								"active-users-per-day"
+							],
+							"query": [
+								{
+									"key": "min",
+									"value": "360"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
