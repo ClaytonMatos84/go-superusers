@@ -42,12 +42,12 @@ func UploadLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("File decoded successfully", slog.Int("user_count", len(users)))
-	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	milliseconds := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseUploadUsers{
 		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
-			Message:       info,
+			Message:       "File loaded into memory with success",
 		},
 		Count: len(users),
 	}
@@ -80,12 +80,12 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userCollection := users[pagination.StartItems:pagination.EndItems]
-	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	milliseconds := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseUsers{
 		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
-			Message:       info,
+			Message:       "User logs retrieved successfully",
 		},
 		Count:      len(userCollection),
 		Pagination: pagination,
@@ -121,12 +121,12 @@ func GetSuperUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userCollection := superUsers[pagination.StartItems:pagination.EndItems]
-	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	milliseconds := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseUsers{
 		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
-			Message:       info,
+			Message:       "Active users with score >= 950 retrieved successfully",
 		},
 		Pagination: pagination,
 		Count:      len(userCollection),
@@ -176,12 +176,12 @@ func GetTopCountries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	milliseconds := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseTopCountries{
 		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
-			Message:       info,
+			Message:       "Super users by country retrieved successfully",
 		},
 		Countries: countriesList,
 	}
@@ -274,12 +274,12 @@ func GetTeamInsights(w http.ResponseWriter, r *http.Request) {
 		teamsList = append(teamsList, team)
 	}
 
-	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	milliseconds := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseTeam{
 		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
-			Message:       info,
+			Message:       "Users statistics by team with members, projects and leaders retrieved successfully",
 		},
 		Teams: teamsList,
 	}
@@ -333,12 +333,12 @@ func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
 		loginsList = filteredLoginsList
 	}
 
-	milliseconds, info := pkg.FinishControlCheck(memStatus, start_time)
+	milliseconds := pkg.FinishControlCheck(memStatus, start_time)
 	response := dto.ResponseLogins{
 		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
-			Message:       info,
+			Message:       "Information about logins per day retrieved successfully",
 		},
 		Logins: loginsList,
 	}
