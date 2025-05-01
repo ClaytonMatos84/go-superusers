@@ -1,6 +1,10 @@
 package model
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/ClaytonMatos84/go-superusers/pkg"
+)
 
 type project struct {
 	Name      string `json:"nome"`
@@ -14,8 +18,8 @@ type team struct {
 }
 
 type logData struct {
-	Date   string `json:"data"`
-	Action string `json:"acao"`
+	Date   pkg.CustomDate `json:"data"`
+	Action Action         `json:"acao"`
 }
 
 type User struct {

@@ -46,8 +46,8 @@ type ResponseTeam struct {
 }
 
 type CountLogins struct {
-	Date  string `json:"date"`
-	Count int    `json:"total"`
+	Date  pkg.CustomDate `json:"date"`
+	Count int            `json:"total"`
 }
 
 type ResponseLogins struct {

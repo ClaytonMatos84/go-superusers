@@ -47,7 +47,7 @@ func UploadLogs(w http.ResponseWriter, r *http.Request) {
 		ResponseBody: dto.ResponseBody{
 			Timestamp:     time.Now().Format(time.RFC3339),
 			ExecutionTime: milliseconds,
-			Message:       "File loaded into memory with success",
+			Message:       "File loaded into memory successfully",
 		},
 		Count: len(users),
 	}
@@ -304,10 +304,10 @@ func GetLoginsPerDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loginsPerDay := make(map[string]int)
+	loginsPerDay := make(map[pkg.CustomDate]int)
 	for _, user := range users {
 		for _, log := range user.Logs {
-			if log.Action == "login" {
+			if log.Action == model.Action(0) {
 				loginsPerDay[log.Date]++
 			}
 		}
