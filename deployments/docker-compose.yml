@@ -1,0 +1,7 @@
+services:
+    log-super-users:
+        image: log-super-users:latest
+        container_name: log-super-users
+        ports:
+            - "9797:8080"
+        restart: unless-stopped
