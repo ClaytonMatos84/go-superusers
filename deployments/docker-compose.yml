@@ -5,3 +5,9 @@ services:
         ports:
             - "9797:8080"
         restart: unless-stopped
+        networks:
+            - custom_network
+
+networks:
+    custom_network:
+        driver: bridge
